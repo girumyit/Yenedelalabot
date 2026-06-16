@@ -12,7 +12,7 @@ async def start_handler(message: types.Message):
     await message.answer("Hello! I am Yenedelabot. I am now online!")
 
 async def main():
-    print("Bot is starting...")
+print("Bot is starting...")
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
