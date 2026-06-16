@@ -1,13 +1,15 @@
-import asyncio
+import os
 import logging
 from fastapi import FastAPI
 from aiogram import Bot, Dispatcher, types
+from aiogram.filters import Command
 from aiogram.types import Update
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 
-TOKEN = "8910862510:AAEpiO2JGuoeyJQjEKcLo558USF6UT0FhgM"
+# Securely grab the token from Render's environment variables
+TOKEN = os.getenv("8910862510:AAH6m0WZfqgPriXs4AXaslgrv4_C59TGLCo")
 WEBHOOK_URL = "https://yenedelalabot.onrender.com/webhook"
 
 bot = Bot(token=TOKEN)
