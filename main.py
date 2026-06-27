@@ -208,7 +208,7 @@ def main():
 
     port = int(os.environ.get("PORT", 8000))
     web.run_app(app, host="0.0.0.0", port=port)
-    )
+    
     webhook_requests_handler.register(app, path="/webhook")
     setup_application(app, dp, bot=bot)
     
