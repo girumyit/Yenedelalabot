@@ -8,12 +8,18 @@ from aiohttp import web
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 
-TOKEN = "8910862510:AAH6m0WZfqgPriXs4AXaslgrv4_C59TGLCo"
+TOKEN = "8910862510:AAGNyljkcCYDvEsEMgAVwiksKXiBlLxJw0w"
 WEBHOOK_URL = "https://yenedelalabot.onrender.com/webhook"
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
-
+# Add your specific channel links here (Replace with your actual channel links/usernames)
+CHANNEL_LINKS = {
+    "house_rent": "https://t.me/rentinadis",
+    "house_sale": "https://t.me/houseaddis",
+    "cars": "https://t.me/carsinadis",
+    "others": "https://https://t.me/marketgebeya"
+}
 # Simple dictionary to store user language choice locally for now
 # Format: {user_id: "en" or "am"}
 USER_LANGUAGES = {}
@@ -22,7 +28,7 @@ USER_LANGUAGES = {}
 STRINGS = {
     "welcome": {
         "en": "👋 **Welcome to Yenedelala Bot!**\n\nYour trusted digital broker for houses, cars, and rentals in Ethiopia.\nWhat are you looking to do today?",
-        "am": "👋 **እንኳን ወደ የነደላላ ቦት በደህና መጡ!**\n\nበኢትዮጵያ ውስጥ ለቤት፣ ለመኪና እና ለኪራይ አስተማማኝ ዲጂታል ደላላዎ።\nዛሬ ምን ማድረግ ይፈልጋሉ?"
+        "am": "👋 **እንኳን ወደ የኔደላላ ቦት በደህና መጡ!**\n\nበኢትዮጵያ ውስጥ ለቤት፣ ለመኪና እና ለኪራይ አስተማማኝ ዲጂታል ደላላዎ።\ለዛሬ ምን ማድረግ ይፈልጋሉ?"
     },
     "btn_browse": {"en": "🔍 Browse Listings", "am": "🔍 ዝርዝሮችን ተመልከት"},
     "btn_post": {"en": "➕ Post an Item", "am": "➕ አዲስ ዕቃ ፍጠር"},
