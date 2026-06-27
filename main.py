@@ -8,7 +8,7 @@ from aiohttp import web
 # Setup logging to see everything in Render's log panel
 logging.basicConfig(level=logging.INFO)
 
-TOKEN = "8910862510:AAGNyljkcCYDvEsEMgAVwiksKXiBlLxJw0w"
+TOKEN = "8910862510:AAEqbXZrlB4V7mS-9K43X3yt5uCLEcb8m5k"
 WEBHOOK_URL = "https://yenedelalabot.onrender.com/webhook"
 
 # Specific channel links configuration
@@ -180,11 +180,11 @@ async def process_help(callback_query: types.CallbackQuery):
     await callback_query.answer()
 
 # Safe application hook triggered cleanly when server boots up
-async def on_startup(app: web.Application) -> None:
+async def on_startup() -> None:
     logging.info(f"Setting webhook to: {WEBHOOK_URL}")
     await bot.set_webhook(url=WEBHOOK_URL, drop_pending_updates=True)
 
-async def on_shutdown(app: web.Application) -> None:
+async def on_shutdown() -> None:
     logging.info("Tearing down webhooks cleanly...")
     await bot.delete_webhook()
     await bot.session.close()
@@ -199,6 +199,17 @@ def main():
     webhook_requests_handler = SimpleRequestHandler(
         dispatcher=dp,
         bot=bot,
+    )
+    webhook_requests_handler.register(app, path="/webhook")
+    setup_application(app, dp, bot=bot)
+    
+    # 🌟 CHANGE ONLY THESE TWO LINES HERE:
+    # Remove app.on_startup.append and use the Dispatcher's built-in registry
+    dp.startup.register(on_startup)
+    dp.shutdown.register(on_shutdown)
+
+    port = int(os.environ.get("PORT", 8000))
+    web.run_app(app, host="0.0.0.0", port=port)
     )
     webhook_requests_handler.register(app, path="/webhook")
     setup_application(app, dp, bot=bot)
