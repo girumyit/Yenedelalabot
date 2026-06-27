@@ -203,8 +203,6 @@ def main():
     webhook_requests_handler.register(app, path="/webhook")
     setup_application(app, dp, bot=bot)
     
-    # 🌟 CHANGE ONLY THESE TWO LINES HERE:
-    # Remove app.on_startup.append and use the Dispatcher's built-in registry
     dp.startup.register(on_startup)
     dp.shutdown.register(on_shutdown)
 
