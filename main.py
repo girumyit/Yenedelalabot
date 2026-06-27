@@ -17,7 +17,7 @@ dp = Dispatcher()
 
 @dp.message(Command("start"))
 async def start_handler(message: types.Message):
-    await message.answer("Hello! I am Yenedelabot. I am now online!")
+    await message.answer("Hello!ሰላምam Yenedelabot. I am now online!")
 
 async def on_startup(bot: Bot) -> None:
     # drop_pending_updates=True deletes old unreplied messages so your bot starts fresh
