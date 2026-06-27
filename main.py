@@ -5,13 +5,13 @@ from aiogram.filters import Command
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from aiohttp import web
 
-# Setup logging
+# Setup logging to see everything in Render's log panel
 logging.basicConfig(level=logging.INFO)
 
 TOKEN = "8910862510:AAGNyljkcCYDvEsEMgAVwiksKXiBlLxJw0w"
 WEBHOOK_URL = "https://yenedelalabot.onrender.com/webhook"
 
-# Add your specific channel links here
+# Specific channel links configuration
 CHANNEL_LINKS = {
     "house_rent": "https://t.me/rentinadis",
     "house_sale": "https://t.me/houseaddis",
@@ -22,10 +22,10 @@ CHANNEL_LINKS = {
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
-# Simple dictionary to store user language choice locally
+# Local runtime memory storage for language codes
 USER_LANGUAGES = {}
 
-# Cleanly formatted dictionary containing all translations
+# String Localizations
 STRINGS = {
     "welcome": {
         "en": "👋 **Welcome to Yenedelala Bot!**\n\nYour trusted digital broker for houses, cars, and rentals in Ethiopia.\nWhat are you looking to do today?",
@@ -52,9 +52,8 @@ STRINGS = {
     }
 }
 
-# Helper function to get correct language string
 def get_txt(user_id: int, key: str, **kwargs) -> str:
-    lang = USER_LANGUAGES.get(user_id, "am") # Amharic is the default language
+    lang = USER_LANGUAGES.get(user_id, "am")
     text = STRINGS.get(key, {}).get(lang, "")
     if kwargs:
         return text.format(**kwargs)
@@ -156,15 +155,10 @@ async def process_category_selection(callback_query: types.CallbackQuery):
     
     channel_kb = types.InlineKeyboardMarkup(
         inline_keyboard=[
-            [
-                types.InlineKeyboardButton(text=get_txt(uid, "btn_view_channel"), url=target_channel_url)
-            ],
-            [
-                types.InlineKeyboardButton(text=get_txt(uid, "btn_back_cat"), callback_data="menu_browse")
-            ]
+            [types.InlineKeyboardButton(text=get_txt(uid, "btn_view_channel"), url=target_channel_url)],
+            [types.InlineKeyboardButton(text=get_txt(uid, "btn_back_cat"), callback_data="menu_browse")]
         ]
     )
-    
     await callback_query.message.edit_text(
         text=get_txt(uid, "channel_redirect_text", cat=cat_title),
         reply_markup=channel_kb,
@@ -185,11 +179,13 @@ async def process_help(callback_query: types.CallbackQuery):
     )
     await callback_query.answer()
 
-async def on_startup(bot: Bot) -> None:
+# Safe application hook triggered cleanly when server boots up
+async def on_startup(app: web.Application) -> None:
+    logging.info(f"Setting webhook to: {WEBHOOK_URL}")
     await bot.set_webhook(url=WEBHOOK_URL, drop_pending_updates=True)
-    logging.info("Webhook successfully set!")
 
-async def on_shutdown(bot: Bot) -> None:
+async def on_shutdown(app: web.Application) -> None:
+    logging.info("Tearing down webhooks cleanly...")
     await bot.delete_webhook()
     await bot.session.close()
 
@@ -205,10 +201,11 @@ def main():
         bot=bot,
     )
     webhook_requests_handler.register(app, path="/webhook")
-
     setup_application(app, dp, bot=bot)
-    app.on_startup.append(lambda _: on_startup(bot))
-    app.on_shutdown.append(lambda _: on_shutdown(bot))
+    
+    # Correctly bind startup and shutdown callbacks directly into the web application life cycle
+    app.on_startup.append(on_startup)
+    app.on_shutdown.append(on_shutdown)
 
     port = int(os.environ.get("PORT", 8000))
     web.run_app(app, host="0.0.0.0", port=port)
