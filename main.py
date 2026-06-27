@@ -8,8 +8,8 @@ from aiohttp import web
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 
-# Your Bot Details
-TOKEN = "8910862510:AAH6m0WZfqgPriXs4AXaslgrv4_C59TGLCo"
+# PASTE YOUR NEW TOKEN FROM BOTFATHER HERE
+TOKEN = "8910862510:AAGNyljkcCYDvEsEMgAVwiksKXiBlLxJw0w" 
 WEBHOOK_URL = "https://yenedelalabot.onrender.com/webhook"
 
 bot = Bot(token=TOKEN)
@@ -30,7 +30,7 @@ async def on_shutdown(bot: Bot) -> None:
     await bot.session.close()
 
 def main():
-    # Initialize aiohttp application (the server)
+    # Initialize aiohttp application server
     app = web.Application()
 
     # Configure the webhook request handler
@@ -38,7 +38,7 @@ def main():
         dispatcher=dp,
         bot=bot,
     )
-    # Register the webhook route (dispatches incoming requests to aiogram)
+    # Register the webhook route
     webhook_requests_handler.register(app, path="/webhook")
 
     # Bind startup and shutdown lifecycle steps
