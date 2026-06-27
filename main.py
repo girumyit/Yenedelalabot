@@ -118,8 +118,3 @@ def main():
 
     port = int(os.environ.get("PORT", 8000))
     web.run_app(app, host="0.0.0.0", port=port)
-git add main.py
-git commit -m "Add inline menu navigation and browsing layout"
-git push origin main
-if __name__ == "__main__":
-    main()
