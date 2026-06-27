@@ -20,10 +20,10 @@ async def start_handler(message: types.Message):
     await message.answer("Hello! I am Yenedelabot. I am now online!")
 
 async def on_startup(bot: Bot) -> None:
-    # Tell Telegram where to send updates
-    await bot.set_webhook(url=WEBHOOK_URL)
-    logging.info("Webhook successfully set!")
-
+    # drop_pending_updates=True deletes old unreplied messages so your bot starts fresh
+    await bot.set_webhook(url=WEBHOOK_URL, drop_pending_updates=True)
+    logging.info("Webhook successfully set and pending updates dropped!")
+    
 async def on_shutdown(bot: Bot) -> None:
     # Clean up on shutdown
     await bot.delete_webhook()
