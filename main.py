@@ -16,21 +16,14 @@ dp = Dispatcher()
 
 @dp.message(Command("start"))
 async def start_handler(message: types.Message):
-    await message.answer("Hello! I am Yenedelabot. I am now online!")
-
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
-
-@dp.message(Command("start"))
-async def start_handler(message: types.Message):
-    # Create clean inline buttons
-    inline_kb = InlineKeyboardMarkup(
+    inline_kb = types.InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text="🔍 Browse Listings", callback_data="menu_browse"),
-                InlineKeyboardButton(text="➕ Post an Item", callback_data="menu_post")
+                types.InlineKeyboardButton(text="🔍 Browse Listings", callback_data="menu_browse"),
+                types.InlineKeyboardButton(text="➕ Post an Item", callback_data="menu_post")
             ],
             [
-                InlineKeyboardButton(text="📞 Contact Broker / Help", callback_data="menu_help")
+                types.InlineKeyboardButton(text="📞 Contact Broker / Help", callback_data="menu_help")
             ]
         ]
     )
@@ -40,72 +33,92 @@ async def start_handler(message: types.Message):
         "Your trusted digital broker for houses, cars, and rentals in Ethiopia.\n"
         "What are you looking to do today?"
     )
-    
     await message.answer(welcome_text, reply_markup=inline_kb, parse_mode="Markdown")
-# Handle "Browse Listings" click
+
+async def on_startup(bot: Bot) -> None:
+    await bot.set_webhook(url=WEBHOOK_URL, drop_pending_updates=True)
+    logging.info("Webhook successfully set!")
+
+async def on_shutdown(bot: Bot) -> None:
+    await bot.delete_webhook()
+    await bot.session.close()
+
+async def health_check(request):
+    return web.Response(text="Bot is running smoothly!", status=200)
+
 @dp.callback_query(lambda c: c.data == "menu_browse")
-async def process_browse_menu(callback_query: CallbackQuery):
-    category_kb = InlineKeyboardMarkup(
+async def process_browse_menu(callback_query: types.CallbackQuery):
+    category_kb = types.InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text="🏠 Houses for Rent", callback_data="cat_house_rent"),
-                InlineKeyboardButton(text="🏢 Houses for Sale", callback_data="cat_house_sale")
+                types.InlineKeyboardButton(text="🏠 Houses for Rent", callback_data="cat_house_rent"),
+                types.InlineKeyboardButton(text="🏢 Houses for Sale", callback_data="cat_house_sale")
             ],
             [
-                InlineKeyboardButton(text="🚘 Cars", callback_data="cat_cars"),
-                InlineKeyboardButton(text="📦 Other Items", callback_data="cat_others")
+                types.InlineKeyboardButton(text="🚘 Cars", callback_data="cat_cars"),
+                types.InlineKeyboardButton(text="📦 Other Items", callback_data="cat_others")
             ],
             [
-                InlineKeyboardButton(text="⬅️ Back to Main Menu", callback_data="back_to_main")
+                types.InlineKeyboardButton(text="⬅️ Back to Main Menu", callback_data="back_to_main")
             ]
         ]
     )
-    
     await callback_query.message.edit_text(
         text="📁 **Select a Category to browse:**",
         reply_markup=category_kb,
         parse_mode="Markdown"
     )
-    # Always answer the callback query so the loading wheel stops spinning
     await callback_query.answer()
 
-# Handle the "Back to Main Menu" button click
 @dp.callback_query(lambda c: c.data == "back_to_main")
-async def process_back_to_main(callback_query: CallbackQuery):
-    # Recreate the original main menu
-    main_kb = InlineKeyboardMarkup(
+async def process_back_to_main(callback_query: types.CallbackQuery):
+    main_kb = types.InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text="🔍 Browse Listings", callback_data="menu_browse"),
-                InlineKeyboardButton(text="➕ Post an Item", callback_data="menu_post")
+                types.InlineKeyboardButton(text="🔍 Browse Listings", callback_data="menu_browse"),
+                types.InlineKeyboardButton(text="➕ Post an Item", callback_data="menu_post")
             ],
             [
-                InlineKeyboardButton(text="📞 Contact Broker / Help", callback_data="menu_help")
+                types.InlineKeyboardButton(text="📞 Contact Broker / Help", callback_data="menu_help")
             ]
         ]
     )
-    
     await callback_query.message.edit_text(
         text="👋 **Welcome to Yenedelala Bot!**\n\nWhat are you looking to do today?",
         reply_markup=main_kb,
         parse_mode="Markdown"
     )
     await callback_query.answer()
-async def on_shutdown(bot: Bot) -> None:
-    await bot.delete_webhook()
-    await bot.session.close()
 
-# THIS IS THE RENDER HEALTH CHECK FIX
-async def health_check(request):
-    return web.Response(text="Bot is running smoothly!", status=200)
+@dp.callback_query(lambda c: c.data.startswith("cat_"))
+async def process_category_selection(callback_query: types.CallbackQuery):
+    category_selected = callback_query.data.replace("cat_", "").replace("_", " ").title()
+    back_kb = types.InlineKeyboardMarkup(
+        inline_keyboard=[[types.InlineKeyboardButton(text="⬅️ Back to Categories", callback_data="menu_browse")]]
+    )
+    await callback_query.message.edit_text(
+        text=f"✨ Showing latest listings for: **{category_selected}**\n\n_(Currently empty. Listings will appear here once connected to database.)_",
+        reply_markup=back_kb,
+        parse_mode="Markdown"
+    )
+    await callback_query.answer()
+
+@dp.callback_query(lambda c: c.data == "menu_help")
+async def process_help(callback_query: types.CallbackQuery):
+    back_kb = types.InlineKeyboardMarkup(
+        inline_keyboard=[[types.InlineKeyboardButton(text="⬅️ Back", callback_data="back_to_main")]]
+    )
+    await callback_query.message.edit_text(
+        text="📞 **Need Assistance?**\n\nFor business inquiries, manual listings, or support, please contact @girumyit.",
+        reply_markup=back_kb,
+        parse_mode="Markdown"
+    )
+    await callback_query.answer()
 
 def main():
     app = web.Application()
-
-    # 1. Add a route for Render's health check on the home page '/'
     app.router.add_get("/", health_check)
 
-    # 2. Configure the webhook request handler for Telegram
     webhook_requests_handler = SimpleRequestHandler(
         dispatcher=dp,
         bot=bot,
@@ -118,3 +131,6 @@ def main():
 
     port = int(os.environ.get("PORT", 8000))
     web.run_app(app, host="0.0.0.0", port=port)
+
+if __name__ == "__main__":
+    main()
