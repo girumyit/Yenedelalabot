@@ -11,29 +11,25 @@ logging.basicConfig(level=logging.INFO)
 TOKEN = "8910862510:AAGNyljkcCYDvEsEMgAVwiksKXiBlLxJw0w"
 WEBHOOK_URL = "https://yenedelalabot.onrender.com/webhook"
 
-bot = Bot(token=TOKEN)
-dp = Dispatcher()
-# Add your specific channel links here (Replace with your actual channel links/usernames)
+# Add your specific channel links here
 CHANNEL_LINKS = {
     "house_rent": "https://t.me/rentinadis",
     "house_sale": "https://t.me/houseaddis",
     "cars": "https://t.me/carsinadis",
-    "others": "https://https://t.me/marketgebeya"
+    "others": "https://t.me/marketgebeya"
 }
-# Simple dictionary to store user language choice locally for now
-# Format: {user_id: "en" or "am"}
+
+bot = Bot(token=TOKEN)
+dp = Dispatcher()
+
+# Simple dictionary to store user language choice locally
 USER_LANGUAGES = {}
 
-# Dictionary containing all translations
+# Cleanly formatted dictionary containing all translations
 STRINGS = {
     "welcome": {
         "en": "👋 **Welcome to Yenedelala Bot!**\n\nYour trusted digital broker for houses, cars, and rentals in Ethiopia.\nWhat are you looking to do today?",
-        "am": "👋 **እንኳን ወደ የኔደላላ ቦት በደህና መጡ!**\n\nበኢትዮጵያ ውስጥ ለቤት፣ ለመኪና እና ለኪራይ አስተማማኝ ዲጂታል ደላላዎ።\ለዛሬ ምን ማድረግ ይፈልጋሉ?"
-        "btn_view_channel": {"en": "📢 Open Telegram Channel", "am": "📢 የቴሌግራም ቻናሉን ክፈት"},
-    "channel_redirect_text": {
-        "en": "🔗 Click the button below to join and view all available listings for **{cat}** on our official channel:",
-        "am": "🔗 በቻናላችን ላይ ያሉትን ሁሉንም የ**{cat}** ዝርዝሮች ለማየት ከታች ያለውን ቁልፍ ይጫኑ፦"
-    }
+        "am": "👋 **እንኳን ወደ የነደላላ ቦት በደህና መጡ!**\n\nበኢትዮጵያ ውስጥ ለቤት፣ ለመኪና እና ለኪራይ አስተማማኝ ዲጂታል ደላላዎ።\nዛሬ ምን ማድረግ ይፈልጋሉ?"
     },
     "btn_browse": {"en": "🔍 Browse Listings", "am": "🔍 ዝርዝሮችን ተመልከት"},
     "btn_post": {"en": "➕ Post an Item", "am": "➕ አዲስ ዕቃ ፍጠር"},
@@ -41,13 +37,14 @@ STRINGS = {
     "btn_back": {"en": "⬅️ Back", "am": "⬅️ ወደኋላ ተመለስ"},
     "btn_back_cat": {"en": "⬅️ Back to Categories", "am": "⬅️ ወደ ምድቦች ተመለስ"},
     "select_cat": {"en": "📁 **Select a Category to browse:**", "am": "📁 **ለመመልከት ምድብ ይምረጡ:**"},
-    "cat_rent": {"en": "🏠 Houses for Rent", "am": "🏠 የሚከራዩ ቤቶች"},
-    "cat_sale": {"en": "🏢 Houses for Sale", "am": "🏢 የሚሸጡ ቤቶች"},
+    "cat_house_rent": {"en": "🏠 Houses for Rent", "am": "🏠 የሚከራዩ ቤቶች"},
+    "cat_house_sale": {"en": "🏢 Houses for Sale", "am": "🏢 የሚሸጡ ቤቶች"},
     "cat_cars": {"en": "🚘 Cars", "am": "🚘 መኪናዎች"},
     "cat_others": {"en": "📦 Other Items", "am": "📦 ሌሎች ዕቃዎች"},
-    "empty_listings": {
-        "en": "✨ Showing latest listings for: **{cat}**\n\n_(Currently empty. Listings will appear here once connected to database.)_",
-        "am": "✨ የ**{cat}** የቅርብ ጊዜ ዝርዝሮች፡\n\n_(በአሁኑ ጊዜ ባዶ ነው። ከዳታቤዝ ጋር ሲገናኝ ዝርዝሮች እዚህ ይታያሉ።)_"
+    "btn_view_channel": {"en": "📢 Open Telegram Channel", "am": "📢 የቴሌግራም ቻናሉን ክፈት"},
+    "channel_redirect_text": {
+        "en": "🔗 Click the button below to join and view all available listings for **{cat}** on our official channel:",
+        "am": "🔗 በቻናላችን ላይ ያሉትን ሁሉንም የ**{cat}** ዝርዝሮች ለማየት ከታች ያለውን ቁልፍ ይጫኑ፦"
     },
     "help_text": {
         "en": "📞 **Need Assistance?**\n\nFor business inquiries, manual listings, or support, please contact @girumyit.",
@@ -65,7 +62,6 @@ def get_txt(user_id: int, key: str, **kwargs) -> str:
 
 @dp.message(Command("start"))
 async def start_handler(message: types.Message):
-    # Ask user to choose language first
     lang_kb = types.InlineKeyboardMarkup(
         inline_keyboard=[
             [
@@ -76,48 +72,12 @@ async def start_handler(message: types.Message):
     )
     await message.answer("Please choose your language / እባክዎ ቋንቋ ይምረጡ፦", reply_markup=lang_kb)
 
-# Handle language selection setup
-@dp.callback_query(lambda c: c.data.startswith("cat_"))
-async def process_category_selection(callback_query: types.CallbackQuery):
-    uid = callback_query.from_user.id
-    raw_cat = callback_query.data.replace("cat_", "")
-    
-    # Clean up the key name to match our CHANNEL_LINKS config map
-    # e.g., "house_rent", "house_sale", "cars", "others"
-    channel_key = raw_cat
-    if channel_key not in CHANNEL_LINKS:
-        channel_key = "others"
-        
-    # Get the specific channel URL
-    target_channel_url = CHANNEL_LINKS[channel_key]
-    
-    # Get the localized title of the category selected
-    cat_title = get_txt(uid, f"cat_{raw_cat}" if f"cat_{raw_cat}" in STRINGS else "cat_others")
-    
-    # Build inline keyboard containing a direct URL switch and a Back button
-    channel_kb = types.InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                types.InlineKeyboardButton(text=get_txt(uid, "btn_view_channel"), url=target_channel_url)
-            ],
-            [
-                types.InlineKeyboardButton(text=get_txt(uid, "btn_back_cat"), callback_data="menu_browse")
-            ]
-        ]
-    )
-    
-    # Send the update to the user with the channel redirection text
-    await callback_query.message.edit_text(
-        text=get_txt(uid, "channel_redirect_text", cat=cat_title),
-        reply_markup=channel_kb,
-        parse_mode="Markdown"
-    )
-    await callback_query.answer()
-    
-    # Save the language choice
+@dp.callback_query(lambda c: c.data.startswith("lang_"))
+async def set_language(callback_query: types.CallbackQuery):
+    user_id = callback_query.from_user.id
+    selected_lang = callback_query.data.replace("lang_", "")
     USER_LANGUAGES[user_id] = selected_lang
     
-    # Build Main Menu based on language choice
     main_kb = types.InlineKeyboardMarkup(
         inline_keyboard=[
             [
@@ -129,7 +89,6 @@ async def process_category_selection(callback_query: types.CallbackQuery):
             ]
         ]
     )
-    
     await callback_query.message.edit_text(
         text=get_txt(user_id, "welcome"),
         reply_markup=main_kb,
@@ -143,8 +102,8 @@ async def process_browse_menu(callback_query: types.CallbackQuery):
     category_kb = types.InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                types.InlineKeyboardButton(text=get_txt(uid, "cat_rent"), callback_data="cat_house_rent"),
-                types.InlineKeyboardButton(text=get_txt(uid, "cat_sale"), callback_data="cat_house_sale")
+                types.InlineKeyboardButton(text=get_txt(uid, "cat_house_rent"), callback_data="cat_house_rent"),
+                types.InlineKeyboardButton(text=get_txt(uid, "cat_house_sale"), callback_data="cat_house_sale")
             ],
             [
                 types.InlineKeyboardButton(text=get_txt(uid, "cat_cars"), callback_data="cat_cars"),
@@ -188,15 +147,27 @@ async def process_category_selection(callback_query: types.CallbackQuery):
     uid = callback_query.from_user.id
     raw_cat = callback_query.data.replace("cat_", "")
     
-    # Translate category display titles
+    channel_key = raw_cat
+    if channel_key not in CHANNEL_LINKS:
+        channel_key = "others"
+        
+    target_channel_url = CHANNEL_LINKS[channel_key]
     cat_title = get_txt(uid, f"cat_{raw_cat}" if f"cat_{raw_cat}" in STRINGS else "cat_others")
     
-    back_kb = types.InlineKeyboardMarkup(
-        inline_keyboard=[[types.InlineKeyboardButton(text=get_txt(uid, "btn_back_cat"), callback_data="menu_browse")]]
+    channel_kb = types.InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                types.InlineKeyboardButton(text=get_txt(uid, "btn_view_channel"), url=target_channel_url)
+            ],
+            [
+                types.InlineKeyboardButton(text=get_txt(uid, "btn_back_cat"), callback_data="menu_browse")
+            ]
+        ]
     )
+    
     await callback_query.message.edit_text(
-        text=get_txt(uid, "empty_listings", cat=cat_title),
-        reply_markup=back_kb,
+        text=get_txt(uid, "channel_redirect_text", cat=cat_title),
+        reply_markup=channel_kb,
         parse_mode="Markdown"
     )
     await callback_query.answer()
