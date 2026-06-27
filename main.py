@@ -1,6 +1,5 @@
 import os
 import logging
-from fastapi import FastAPI
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.types import Update
