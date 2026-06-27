@@ -29,6 +29,11 @@ STRINGS = {
     "welcome": {
         "en": "👋 **Welcome to Yenedelala Bot!**\n\nYour trusted digital broker for houses, cars, and rentals in Ethiopia.\nWhat are you looking to do today?",
         "am": "👋 **እንኳን ወደ የኔደላላ ቦት በደህና መጡ!**\n\nበኢትዮጵያ ውስጥ ለቤት፣ ለመኪና እና ለኪራይ አስተማማኝ ዲጂታል ደላላዎ።\ለዛሬ ምን ማድረግ ይፈልጋሉ?"
+        "btn_view_channel": {"en": "📢 Open Telegram Channel", "am": "📢 የቴሌግራም ቻናሉን ክፈት"},
+    "channel_redirect_text": {
+        "en": "🔗 Click the button below to join and view all available listings for **{cat}** on our official channel:",
+        "am": "🔗 በቻናላችን ላይ ያሉትን ሁሉንም የ**{cat}** ዝርዝሮች ለማየት ከታች ያለውን ቁልፍ ይጫኑ፦"
+    }
     },
     "btn_browse": {"en": "🔍 Browse Listings", "am": "🔍 ዝርዝሮችን ተመልከት"},
     "btn_post": {"en": "➕ Post an Item", "am": "➕ አዲስ ዕቃ ፍጠር"},
@@ -72,10 +77,42 @@ async def start_handler(message: types.Message):
     await message.answer("Please choose your language / እባክዎ ቋንቋ ይምረጡ፦", reply_markup=lang_kb)
 
 # Handle language selection setup
-@dp.callback_query(lambda c: c.data.startswith("lang_"))
-async def set_language(callback_query: types.CallbackQuery):
-    user_id = callback_query.from_user.id
-    selected_lang = callback_query.data.replace("lang_", "")
+@dp.callback_query(lambda c: c.data.startswith("cat_"))
+async def process_category_selection(callback_query: types.CallbackQuery):
+    uid = callback_query.from_user.id
+    raw_cat = callback_query.data.replace("cat_", "")
+    
+    # Clean up the key name to match our CHANNEL_LINKS config map
+    # e.g., "house_rent", "house_sale", "cars", "others"
+    channel_key = raw_cat
+    if channel_key not in CHANNEL_LINKS:
+        channel_key = "others"
+        
+    # Get the specific channel URL
+    target_channel_url = CHANNEL_LINKS[channel_key]
+    
+    # Get the localized title of the category selected
+    cat_title = get_txt(uid, f"cat_{raw_cat}" if f"cat_{raw_cat}" in STRINGS else "cat_others")
+    
+    # Build inline keyboard containing a direct URL switch and a Back button
+    channel_kb = types.InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                types.InlineKeyboardButton(text=get_txt(uid, "btn_view_channel"), url=target_channel_url)
+            ],
+            [
+                types.InlineKeyboardButton(text=get_txt(uid, "btn_back_cat"), callback_data="menu_browse")
+            ]
+        ]
+    )
+    
+    # Send the update to the user with the channel redirection text
+    await callback_query.message.edit_text(
+        text=get_txt(uid, "channel_redirect_text", cat=cat_title),
+        reply_markup=channel_kb,
+        parse_mode="Markdown"
+    )
+    await callback_query.answer()
     
     # Save the language choice
     USER_LANGUAGES[user_id] = selected_lang
