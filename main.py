@@ -397,7 +397,6 @@ def main():
 if __name__ == "__main__":
     main()
 
-```
     await callback_query.answer()
 
 @dp.callback_query(lambda c: c.data == "menu_browse")
