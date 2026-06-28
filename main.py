@@ -5,6 +5,7 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from aiohttp import web
 
 # Setup logging
@@ -317,40 +318,33 @@ async def process_help(callback_query: types.CallbackQuery):
     )
     await callback_query.answer()
 
-# --- CUSTOM DIRECT WEBHOOK ROUTE HANDLING ---
-async def custom_webhook_handler(request):
-    try:
-        # Pull raw JSON payloads directly from the streaming request
-        bot_json = await request.json()
-        update = types.Update.model_validate(bot_json, context={"bot": bot})
-        
-        # Manually inject data straightforward down the dispatcher path
-        await dp.feed_update(bot, update)
-        return web.Response(status=200)
-    except Exception as err:
-        logging.error(f"Error handling update stream manually: {err}")
-        return web.Response(status=500)
-
-async def health_check(request):
-    return web.Response(text="Bot gateway operational", status=200)
-
-async def on_startup(app):
+async def on_startup(bot: Bot) -> None:
     logging.info(f"Connecting Webhook securely -> {WEBHOOK_URL}")
     await bot.set_webhook(url=WEBHOOK_URL, drop_pending_updates=True)
 
-async def on_shutdown(app):
+async def on_shutdown(bot: Bot) -> None:
     logging.info("Disconnecting application links smoothly...")
     await bot.delete_webhook()
     await bot.session.close()
 
+async def health_check(request):
+    return web.Response(text="Bot gateway operational", status=200)
+
 def main():
     app = web.Application()
     app.router.add_get("/", health_check)
-    app.router.add_post("/webhook", custom_webhook_handler)
 
-    # Use aiohttp application context listeners for application lifecycles
-    app.on_startup.append(on_startup)
-    app.on_shutdown.append(on_shutdown)
+    # Correct native integration of startup/shutdown events
+    dp.startup.register(on_startup)
+    dp.shutdown.register(on_shutdown)
+
+    # Use the native handler that correctly builds FSM state resolution
+    webhook_requests_handler = SimpleRequestHandler(
+        dispatcher=dp,
+        bot=bot,
+    )
+    webhook_requests_handler.register(app, path="/webhook")
+    setup_application(app, dp, bot=bot)
 
     port = int(os.environ.get("PORT", 8000))
     web.run_app(app, host="0.0.0.0", port=port)
