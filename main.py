@@ -1,12 +1,10 @@
 import os
-import os
 import logging
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
-from aiogram.fsm.context import FSMContext  # <--- MAKE SURE THIS LINE IS PRESENT
+from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from aiohttp import web
 
 # Setup logging
@@ -14,7 +12,7 @@ logging.basicConfig(level=logging.INFO)
 
 TOKEN = "8910862510:AAHQ2hexfFKQMzlfIXZg9SpoCN0bzzUeFg4"
 WEBHOOK_URL = "https://yenedelalabot.onrender.com/webhook"
-ADMIN_ID = 1001171704728  # Replace with your actual Telegram numeric chat ID to receive submittals!
+ADMIN_ID = 5691062953  # Ensure this is your correct personal numeric ID
 
 CHANNEL_LINKS = {
     "house_rent": "https://t.me/rentinadis",
@@ -33,7 +31,6 @@ class PostItemState(StatesGroup):
     sending_photos = State()
 
 bot = Bot(token=TOKEN)
-# MemoryStorage retains user forms during multi-step processes
 dp = Dispatcher(storage=MemoryStorage())
 
 USER_LANGUAGES = {}
@@ -281,7 +278,6 @@ async def post_photos_and_finalize(message: types.Message, state: FSMContext):
         return
 
     if message.text == "✅ Done / አብቅቻለሁ" or (not message.photo and len(data["photos"]) > 0):
-        # Build out summary message text layout
         summary = (
             "🚀 **New Listing Submission!**\n\n"
             f"👤 **User:** @{message.from_user.username or 'No Username'} (ID: {uid})\n"
@@ -292,7 +288,6 @@ async def post_photos_and_finalize(message: types.Message, state: FSMContext):
             f"📝 **Description:** {data.get('description')}"
         )
         
-        # Ship summary metadata over to admin chat target room
         try:
             await bot.send_message(chat_id=ADMIN_ID, text=summary)
             for photo_id in data.get("photos", []):
@@ -302,7 +297,6 @@ async def post_photos_and_finalize(message: types.Message, state: FSMContext):
             
         await state.clear()
         
-        # Clean remove structural custom keyboard
         remove_kb = types.ReplyKeyboardRemove()
         success_msg = "🎉 **Thank you! Your submission has been received by our broker queue.**" if USER_LANGUAGES.get(uid, "am") == "en" else "🎉 **እናመሰግናለን! ያስገቡት መረጃ ለደላላችን ደርሷል። በቅርቡ ቻናሉ ላይ ይለጠፋል።**"
         
@@ -323,31 +317,40 @@ async def process_help(callback_query: types.CallbackQuery):
     )
     await callback_query.answer()
 
-async def on_startup(bot: Bot) -> None:
-    logging.info(f"Setting webhook to: {WEBHOOK_URL}")
-    await bot.set_webhook(url=WEBHOOK_URL, drop_pending_updates=True)
-
-async def on_shutdown(bot: Bot) -> None:
-    logging.info("Tearing down webhooks cleanly...")
-    await bot.delete_webhook()
-    await bot.session.close()
+# --- CUSTOM DIRECT WEBHOOK ROUTE HANDLING ---
+async def custom_webhook_handler(request):
+    try:
+        # Pull raw JSON payloads directly from the streaming request
+        bot_json = await request.json()
+        update = types.Update.model_validate(bot_json, context={"bot": bot})
+        
+        # Manually inject data straightforward down the dispatcher path
+        await dp.feed_update(bot, update)
+        return web.Response(status=200)
+    except Exception as err:
+        logging.error(f"Error handling update stream manually: {err}")
+        return web.Response(status=500)
 
 async def health_check(request):
-    return web.Response(text="Bot is running smoothly!", status=200)
+    return web.Response(text="Bot gateway operational", status=200)
+
+async def on_startup(app):
+    logging.info(f"Connecting Webhook securely -> {WEBHOOK_URL}")
+    await bot.set_webhook(url=WEBHOOK_URL, drop_pending_updates=True)
+
+async def on_shutdown(app):
+    logging.info("Disconnecting application links smoothly...")
+    await bot.delete_webhook()
+    await bot.session.close()
 
 def main():
     app = web.Application()
     app.router.add_get("/", health_check)
+    app.router.add_post("/webhook", custom_webhook_handler)
 
-    dp.startup.register(on_startup)
-    dp.shutdown.register(on_shutdown)
-
-    webhook_requests_handler = SimpleRequestHandler(
-        dispatcher=dp,
-        bot=bot,
-    )
-    webhook_requests_handler.register(app, path="/webhook")
-    setup_application(app, dp, bot=bot)
+    # Use aiohttp application context listeners for application lifecycles
+    app.on_startup.append(on_startup)
+    app.on_shutdown.append(on_shutdown)
 
     port = int(os.environ.get("PORT", 8000))
     web.run_app(app, host="0.0.0.0", port=port)
