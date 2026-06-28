@@ -29,7 +29,7 @@ class PostItemState(StatesGroup):
     choosing_deal = State()
     entering_title = State()
     entering_description = State()
-    sending_photos = State()
+    confirming_post = State() # Added confirmation state layer
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
@@ -39,7 +39,7 @@ USER_LANGUAGES = {}
 STRINGS = {
     "welcome": {
         "en": "👋 **Welcome to Yenedelala Bot!**\n\nYour trusted digital broker for houses, cars, and rentals in Ethiopia.\nWhat are you looking to do today?",
-        "am": "👋 **እንኳን ወደ የነደላላ ቦት በደህና መጡ!**\n\nበኢትዮጵያ ውስጥ ለቤት፣ ለመኪና እና ለኪራይ አስተማማኝ ዲጂታል ደላላዎ።\nዛሬ ምን ማድረግ ይፈልጋሉ?"
+        "am": "👋 **እንኳን ወደ የኔደላላ ቦት በደህና መጡ!**\n\nበኢትዮጵያ ውስጥ ለቤት፣ ለመኪና እና ለኪራይ አስተማማኝ ዲጂታል ደላላዎ።\nዛሬ ምን ማድረግ ይፈልጋሉ?"
     },
     "btn_browse": {"en": "🔍 Browse Listings", "am": "🔍 ዝርዝሮችን ተመልከት"},
     "btn_post": {"en": "➕ Post an Item", "am": "➕ አዲስ ዕቃ ፍጠር"},
@@ -254,60 +254,101 @@ async def post_title_entered(message: types.Message, state: FSMContext):
 @dp.message(PostItemState.entering_description)
 async def post_description_entered(message: types.Message, state: FSMContext):
     uid = message.from_user.id
-    await state.update_data(description=message.text)
+    await state.update_data(description=message.text, photos=[])
     
-    await state.set_state(PostItemState.sending_photos)
-    kb = types.ReplyKeyboardMarkup(
-        keyboard=[[types.KeyboardButton(text="✅ Done / አብቅቻለሁ")]],
-        resize_keyboard=True,
-        one_time_keyboard=True
-    )
-    msg = "📸 **Now send your property photos.**\n\nSend your best photos one by one. When you are done, tap the button below." if USER_LANGUAGES.get(uid, "am") == "en" else "📸 **አሁን የንብረቱን/እቃውን ፎቶዎች ይላኩ።**\n\nፎቶዎቹን একে একে ይላኩ። ሲጨርሱ ከታች ያለውን ቁልፍ ይጫኑ።"
-    await message.answer(text=msg, parse_mode="Markdown", reply_markup=kb)
+    await show_review_screen(message, state)
 
-@dp.message(PostItemState.sending_photos)
-async def post_photos_and_finalize(message: types.Message, state: FSMContext):
+# --- REUSABLE REVIEW SHEET OVERLAY ---
+async def show_review_screen(message: types.Message, state: FSMContext):
     uid = message.from_user.id
     data = await state.get_data()
+    await state.set_state(PostItemState.confirming_post)
     
-    if "photos" not in data:
-        data["photos"] = []
-        
+    review_template = (
+        "📋 <b>HERE IS YOUR LOOKING FOR POST</b>\n\n"
+        f"📦 <b>Category:</b> {data.get('category').upper()}\n"
+        f"🏢 <b>Type:</b> {data.get('type')}\n"
+        f"🏷️ <b>Deal:</b> {data.get('deal')}\n"
+        f"📌 <b>Title:</b> {data.get('title')}\n"
+        f"📝 <b>Description:</b> {data.get('description')}\n"
+        f"📸 <b>Photos Attached:</b> {len(data.get('photos', []))}\n\n"
+        "💳 <b>Fee: 50 Birr</b>"
+    )
+    
+    confirm_kb = types.InlineKeyboardMarkup(
+        inline_keyboard=[
+            [types.InlineKeyboardButton(text="✅ Looks Great — Post It!", callback_data="action_confirm_submit")],
+            [types.InlineKeyboardButton(text="📸 Add a Sample Photo (Optional)", callback_data="action_add_photo")],
+            [types.InlineKeyboardButton(text="📝 Let Me Edit Something", callback_data="menu_post")]
+        ]
+    )
+    
+    await message.answer(text=review_template, reply_markup=confirm_kb, parse_mode="HTML")
+
+@dp.callback_query(PostItemState.confirming_post, lambda c: c.data == "action_add_photo")
+async def request_photo_upload(callback_query: types.CallbackQuery):
+    uid = callback_query.from_user.id
+    msg = "📸 Please send your photo directly into this chat room now. You can send multiple photos one by one." if USER_LANGUAGES.get(uid, "am") == "en" else "📸 እባክዎን ፎቶዎን አሁን በዚህ ቻት ውስጥ ይላኩ። ፎቶዎችን একে একে መላክ ይችላሉ።"
+    await callback_query.message.answer(text=msg)
+    await callback_query.answer()
+
+@dp.message(PostItemState.confirming_post)
+async def process_photo_or_text_in_confirm(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    
     if message.photo:
-        data["photos"].append(message.photo[-1].file_id)
-        await state.update_data(photos=data["photos"])
+        photos_list = data.get("photos", [])
+        photos_list.append(message.photo[-1].file_id)
+        await state.update_data(photos=photos_list)
+        
+        await message.answer("📸 Photo added successfully!")
+        await show_review_screen(message, state)
         return
 
-    if message.text == "✅ Done / አብቅቻለሁ" or (not message.photo and len(data["photos"]) > 0):
-        # Build out summary message using safe HTML formatting
-        summary = (
-            "🚀 <b>New Listing Submission!</b>\n\n"
-            f"👤 <b>User:</b> @{message.from_user.username or 'No Username'} (ID: {uid})\n"
-            f"📁 <b>Category:</b> {data.get('category')}\n"
-            f"🏢 <b>Type:</b> {data.get('type')}\n"
-            f"🏷️ <b>Deal:</b> {data.get('deal')}\n"
-            f"📌 <b>Title:</b> {data.get('title')}\n"
-            f"📝 <b>Description:</b> {data.get('description')}"
-        )
+    await message.answer("⚠️ Please use the buttons to proceed or upload an image file.")
+
+@dp.callback_query(PostItemState.confirming_post, lambda c: c.data == "action_confirm_submit")
+async def finalize_post_with_pricing(callback_query: types.CallbackQuery, state: FSMContext):
+    uid = callback_query.from_user.id
+    data = await state.get_data()
+    
+    summary = (
+        "🚀 <b>New Listing Submission!</b>\n\n"
+        f"👤 <b>User:</b> @{callback_query.from_user.username or 'No Username'} (ID: {uid})\n"
+        f"📁 <b>Category:</b> {data.get('category')}\n"
+        f"🏢 <b>Type:</b> {data.get('type')}\n"
+        f"🏷️ <b>Deal:</b> {data.get('deal')}\n"
+        f"📌 <b>Title:</b> {data.get('title')}\n"
+        f"📝 <b>Description:</b> {data.get('description')}"
+    )
+    
+    target_chat = ADMIN_ID if ADMIN_ID else uid
+    
+    try:
+        await bot.send_message(chat_id=target_chat, text=summary, parse_mode="HTML")
+        for photo_id in data.get("photos", []):
+            try:
+                await bot.send_photo(chat_id=target_chat, photo=photo_id)
+            except Exception as p_err:
+                logging.error(f"Photo delivery failed: {p_err}")
+    except Exception as e:
+        logging.error(f"Primary listing delivery failed: {e}")
         
-        try:
-            # Send the text summary using HTML format
-            await bot.send_message(chat_id=ADMIN_ID, text=summary, parse_mode="HTML")
-            
-            for photo_id in data.get("photos", []):
-                try:
-                    await bot.send_photo(chat_id=ADMIN_ID, photo=photo_id)
-                except Exception as p_err:
-                    logging.error(f"Photo send fail: {p_err}")
-        except Exception as e:
-            logging.error(f"Failed forwarding entry to admin: {e}")
-            
-        await state.clear()
-        
-        remove_kb = types.ReplyKeyboardRemove()
-        success_msg = "🎉 **Thank you! Your submission has been received by our broker queue.**" if USER_LANGUAGES.get(uid, "am") == "en" else "🎉 **እናመሰግናለን! ያስገቡት መረጃ ለደላላችን ደርሷል። በቅርቡ ቻናሉ ላይ ይለጠፋል።**"
-        
-        await message.answer(text=success_msg, reply_markup=remove_kb, parse_mode="Markdown")
+    await state.clear()
+    
+    pricing_explainer = (
+        "🎉 <b>*One last step — 50 Birr listing fee.*</b>\n\n"
+        "<b>*Why do buyers pay too?*</b>\n\n"
+        "✅ <b>*Safety:*</b> Keeps spam and fake requests out\n"
+        "✅ <b>*Quality:*</b> Only serious buyers post — protects sellers from time-wasters\n"
+        "✅ <b>*Trust:*</b> Keeps our platform clean and reliable\n"
+        "✅ <b>*Sustainability:*</b> Keeps servers running 24/7\n\n"
+        "Your 'Looking For' post stays live for 60 days or until you find what you need.\n\n"
+        "👉 <i>Then send your payment screenshot RIGHT HERE in this chat.</i> 👇"
+    )
+    
+    await callback_query.message.answer(text=pricing_explainer, parse_mode="HTML")
+    await callback_query.answer()
 
 # --- END FORM FLOW HANDLERS ---
 
@@ -340,11 +381,9 @@ def main():
     app = web.Application()
     app.router.add_get("/", health_check)
 
-    # Correct native integration of startup/shutdown events
     dp.startup.register(on_startup)
     dp.shutdown.register(on_shutdown)
 
-    # Use the native handler that correctly builds FSM state resolution
     webhook_requests_handler = SimpleRequestHandler(
         dispatcher=dp,
         bot=bot,
