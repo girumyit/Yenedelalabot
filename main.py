@@ -13,7 +13,7 @@ logging.basicConfig(level=logging.INFO)
 
 TOKEN = "8910862510:AAHQ2hexfFKQMzlfIXZg9SpoCN0bzzUeFg4"
 WEBHOOK_URL = "https://yenedelalabot.onrender.com/webhook"
-ADMIN_ID = 427124870  # Ensure this is your correct personal numeric ID
+ADMIN_ID = 5691062953  # Ensure this is your correct personal numeric ID
 
 CHANNEL_LINKS = {
     "house_rent": "https://t.me/rentinadis",
@@ -376,12 +376,16 @@ async def on_shutdown(bot: Bot) -> None:
     await bot.delete_webhook()
     await bot.session.close()
 
-async def health_check(request):
+# Combined handler for both regular root and alternative pings
+async def combined_health_route(request):
     return web.Response(text="Bot gateway operational", status=200)
 
 def main():
     app = web.Application()
-    app.router.add_get("/", health_check)
+    
+    # Catch health check pings at both paths cleanly
+    app.router.add_get("/", combined_health_route)
+    app.router.add_get("/webhook", combined_health_route)
 
     dp.startup.register(on_startup)
     dp.shutdown.register(on_shutdown)
