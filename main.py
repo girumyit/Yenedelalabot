@@ -13,7 +13,7 @@ logging.basicConfig(level=logging.INFO)
 
 TOKEN = "8910862510:AAHQ2hexfFKQMzlfIXZg9SpoCN0bzzUeFg4"
 WEBHOOK_URL = "https://yenedelalabot.onrender.com/webhook"
-ADMIN_ID = 5691062953  # Your correct personal numeric ID
+ADMIN_ID = 427124870  # Your correct personal numeric ID
 
 CHANNEL_LINKS = {
     "house_rent": "https://t.me/rentinadis",
@@ -40,7 +40,7 @@ USER_LANGUAGES = {}
 STRINGS = {
     "welcome": {
         "en": "👋 **Welcome to Yenedelala Bot!**\n\nYour trusted digital broker for houses, cars, and rentals in Ethiopia.\nWhat are you looking to do today?",
-        "am": "👋 **እንኳን ወደ የነደላላ ቦት በደህና መጡ!**\n\nበኢትዮጵያ ውስጥ ለቤት፣ ለመኪና እና ለኪራይ አስተማማኝ ዲጂታል ደላላዎ።\nዛሬ ምን ማድረግ ይፈልጋሉ?"
+        "am": "👋 **እንኳን ወደ የኔደላላ ቦት በደህና መጡ!**\n\nበኢትዮጵያ ውስጥ ለቤት፣ ለመኪና እና ለኪራይ አስተማማኝ ዲጂታል ደላላዎ።\nዛሬ ምን ማድረግ ይፈልጋሉ?"
     },
     "btn_browse": {"en": "🔍 Browse Listings", "am": "🔍 ዝርዝሮችን ተመልከት"},
     "btn_post": {"en": "➕ Post an Item", "am": "➕ አዲስ ዕቃ ፍጠር"},
