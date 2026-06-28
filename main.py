@@ -13,7 +13,7 @@ logging.basicConfig(level=logging.INFO)
 
 TOKEN = "8910862510:AAHQ2hexfFKQMzlfIXZg9SpoCN0bzzUeFg4"
 WEBHOOK_URL = "https://yenedelalabot.onrender.com/webhook"
-ADMIN_ID = 427124870  # Ensure this is your correct personal numeric ID
+ADMIN_ID = 5691062953  # Ensure this is your correct personal numeric ID
 
 CHANNEL_LINKS = {
     "house_rent": "https://t.me/rentinadis",
@@ -30,6 +30,7 @@ class PostItemState(StatesGroup):
     entering_title = State()
     entering_description = State()
     confirming_post = State()
+    waiting_for_payment = State()  # New state to halt submission until screenshot is sent
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
@@ -59,7 +60,26 @@ STRINGS = {
     "help_text": {
         "en": "📞 **Need Assistance?**\n\nFor business inquiries, manual listings, or support, please contact @girumyit.",
         "am": "📞 **እርዳታ ይፈልጋሉ?**\n\nለንግድ ስራ መጠይቆች፣ እቃዎችን ለማስመዝገብ ወይም ለድጋፍ እባክዎን @girumyit ን ያግኙ።"
-    }
+    },
+    "pricing_explainer": {
+        "en": "🎉 **One last step — 50 Birr listing fee.**\n\n<b>Why do buyers pay too?</b>\n\n✅ <b>Safety:</b> Keeps spam and fake requests out\n✅ <b>Quality:</b> Only serious buyers post — protects sellers from time-wasters\n✅ <b>Trust:</b> Keeps our platform clean and reliable\n✅ <b>Sustainability:</b> Keeps servers running 24/7\n\nYour 'Looking For' post stays live for 60 days or until you find what you need.\n\n👉 <b>Please send your payment screenshot RIGHT HERE in this chat to complete submission.</b> 👇",
+        "am": "🎉 **የመጨረሻው ደረጃ — 50 ብር የዝርዝር ክፍያ።**\n\n<b>ለምን ክፍያ ያስፈልጋል?</b>\n\n✅ <b>ደህንነት፦</b> ማጭበርበር እና የውሸት ጥያቄዎችን ይከላከላል\n✅ <b>ጥራት፦</b> እውነተኛ ገዢዎች ብቻ ይለጥፋሉ — ሻጮችን ካልሆናቸው ሰዎች ይጠብቃል\n✅ <b>እምነት፦</b> መድረካችንን ንፁህ እና አስተማማኝ ያደርገዋል\n✅ <b>ቀጣይነት፦</b> ሰርቨሮች በ24/7 እንዲሰሩ ይረዳል\n\nየእርስዎ ልጥፍ ለ60 ቀናት ወይም የሚፈልጉትን እስኪያገኙ ድረስ ይቆያል።\n\n👉 <b>እባክዎ ምዝገባውን ለማጠናቀቅ የክፍያዎን ቅጽበታዊ ገጽ እይታ (Screenshot) አሁኑኑ እዚህ ቻት ውስጥ ይላኩ።</b> 👇"
+    },
+    "thank_you": {
+        "en": "✅ **Thank you! Your payment screenshot and listing details have been submitted to the admin for review.**",
+        "am": "✅ **እናመሰግናለን! የእርስዎ የክፍያ ማረጋገጫ እና የዕቃው ዝርዝር ለግምገማ ወደ አስተዳዳሪ ተልኳል።**"
+    },
+    "admin_notify_title": {
+        "en": "🚀 <b>New Paid Listing Submission!</b>\n\n",
+        "am": "🚀 <b>አዲስ የተከፈለበት የዕቃ ምዝገባ ጥያቄ!</b>\n\n"
+    },
+    "admin_user": {"en": "👤 <b>User:</b> ", "am": "👤 <b>ተጠቃሚ፦</b> "},
+    "admin_lang": {"en": "🌐 <b>Selected Language:</b> ", "am": "🌐 <b>የተመረጠ ቋንቋ፦</b> "},
+    "admin_cat": {"en": "📁 <b>Category:</b> ", "am": "📁 <b>ምድብ፦</b> "},
+    "admin_type": {"en": "🏢 <b>Type:</b> ", "am": "🏢 <b>አይነት፦</b> "},
+    "admin_deal": {"en": "🏷️ <b>Deal:</b> ", "am": "🏷️ <b>ሁኔታ፦</b> "},
+    "admin_title": {"en": "📌 <b>Title:</b> ", "am": "📌 <b>ርዕስ፦</b> "},
+    "admin_desc": {"en": "📝 <b>Description:</b> ", "am": "📝 <b>መግለጫ፦</b> "}
 }
 
 def get_txt(user_id: int, key: str, **kwargs) -> str:
@@ -256,7 +276,6 @@ async def post_description_entered(message: types.Message, state: FSMContext):
     await state.update_data(description=message.text, photos=[])
     await show_review_screen(message, state)
 
-# --- REUSABLE REVIEW SHEET OVERLAY ---
 async def show_review_screen(message: types.Message, state: FSMContext):
     data = await state.get_data()
     await state.set_state(PostItemState.confirming_post)
@@ -312,45 +331,63 @@ async def process_photo_or_text_in_confirm(message: types.Message, state: FSMCon
     await message.answer("⚠️ Please use the buttons to proceed or upload an image file.")
 
 @dp.callback_query(PostItemState.confirming_post, lambda c: c.data == "action_confirm_submit")
-async def finalize_post_with_pricing(callback_query: types.CallbackQuery, state: FSMContext):
+async def request_payment_screenshot(callback_query: types.CallbackQuery, state: FSMContext):
     uid = callback_query.from_user.id
+    # Switch state to wait for payment screenshot instead of delivering to admin early
+    await state.set_state(PostItemState.waiting_for_payment)
+    
+    await callback_query.message.answer(text=get_txt(uid, "pricing_explainer"), parse_mode="HTML")
+    await callback_query.answer()
+
+# --- NEW: HANDLE PAYMENT SCREENSHOT AND TRIGGER NOTIFICATION IN SELECTED LANGUAGE ---
+@dp.message(PostItemState.waiting_for_payment)
+async def process_payment_screenshot(message: types.Message, state: FSMContext):
+    uid = message.from_user.id
+    
+    if not message.photo:
+        await message.answer("⚠️ Please send a valid image/screenshot of your payment confirmation to proceed.")
+        return
+
+    payment_screenshot_id = message.photo[-1].file_id
     data = await state.get_data()
     
+    user_lang_code = USER_LANGUAGES.get(uid, "am")
+    lang_label = "🇺🇸 English" if user_lang_code == "en" else "🇪🇹 አማርኛ (Amharic)"
+
+    # Construct complete admin summary using user's chosen language infrastructure
     summary = (
-        "🚀 <b>New Listing Submission!</b>\n\n"
-        f"👤 <b>User:</b> @{callback_query.from_user.username or 'No Username'} (ID: {uid})\n"
-        f"📁 <b>Category:</b> {data.get('category')}\n"
-        f"🏢 <b>Type:</b> {data.get('type')}\n"
-        f"🏷️ <b>Deal:</b> {data.get('deal')}\n"
-        f"📌 <b>Title:</b> {data.get('title')}\n"
-        f"📝 <b>Description:</b> {data.get('description')}"
+        f"{get_txt(uid, 'admin_notify_title')}"
+        f"{get_txt(uid, 'admin_user')}@{message.from_user.username or 'No Username'} (ID: {uid})\n"
+        f"{get_txt(uid, 'admin_lang')}{lang_label}\n"
+        f"{get_txt(uid, 'admin_cat')}{data.get('category')}\n"
+        f"{get_txt(uid, 'admin_type')}{data.get('type')}\n"
+        f"{get_txt(uid, 'admin_deal')}{data.get('deal')}\n"
+        f"{get_txt(uid, 'admin_title')}{data.get('title')}\n"
+        f"{get_txt(uid, 'admin_desc')}{data.get('description')}"
     )
     
     target_chat = ADMIN_ID if ADMIN_ID else uid
     try:
+        # 1. Send the data structure text to admin
         await bot.send_message(chat_id=target_chat, text=summary, parse_mode="HTML")
+        
+        # 2. Forward item photos if present
         for photo_id in data.get("photos", []):
             try:
                 await bot.send_photo(chat_id=target_chat, photo=photo_id)
             except Exception as p_err:
-                logging.error(f"Photo delivery failed: {p_err}")
-    except Exception as e:
-        logging.error(f"Primary listing delivery failed: {e}")
+                logging.error(f"Item photo delivery failed: {p_err}")
+                
+        # 3. Deliver payment confirmation screenshot tagged cleanly
+        caption_txt = "🧾 <b>Payment Screenshot</b>" if user_lang_code == "en" else "🧾 <b>የክፍያ ማረጋገጫ ፎቶ</b>"
+        await bot.send_photo(chat_id=target_chat, photo=payment_screenshot_id, caption=caption_txt, parse_mode="HTML")
         
+    except Exception as e:
+        logging.error(f"Listing + Payment delivery structure failed: {e}")
+        
+    # Clear state completely now that data is successfully compiled and safely moved
     await state.clear()
-    
-    pricing_explainer = (
-        "🎉 <b>*One last step — 50 Birr listing fee.*</b>\n\n"
-        "<b>*Why do buyers pay too?*</b>\n\n"
-        "✅ <b>*Safety:*</b> Keeps spam and fake requests out\n"
-        "✅ <b>*Quality:*</b> Only serious buyers post — protects sellers from time-wasters\n"
-        "✅ <b>*Trust:*</b> Keeps our platform clean and reliable\n"
-        "✅ <b>*Sustainability:*</b> Keeps servers running 24/7\n\n"
-        "Your 'Looking For' post stays live for 60 days or until you find what you need.\n\n"
-        "👉 <i>Then send your payment screenshot RIGHT HERE in this chat.</i> 👇"
-    )
-    await callback_query.message.answer(text=pricing_explainer, parse_mode="HTML")
-    await callback_query.answer()
+    await message.answer(text=get_txt(uid, "thank_you"), parse_mode="Markdown")
 
 # --- END FORM FLOW HANDLERS ---
 
@@ -376,14 +413,12 @@ async def on_shutdown(bot: Bot) -> None:
     await bot.delete_webhook()
     await bot.session.close()
 
-# Combined handler for both regular root and alternative pings
 async def combined_health_route(request):
     return web.Response(text="Bot gateway operational", status=200)
 
 def main():
     app = web.Application()
     
-    # Catch health check pings at both paths cleanly
     app.router.add_get("/", combined_health_route)
     app.router.add_get("/webhook", combined_health_route)
 
