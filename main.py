@@ -8,7 +8,7 @@ from aiohttp import web
 # Setup logging to see everything in Render's log panel
 logging.basicConfig(level=logging.INFO)
 
-TOKEN = "8910862510:AAEqbXZrlB4V7mS-9K43X3yt5uCLEcb8m5k"
+TOKEN = "8910862510:AAHQ2hexfFKQMzlfIXZg9SpoCN0bzzUeFg4"
 WEBHOOK_URL = "https://yenedelalabot.onrender.com/webhook"
 
 # Specific channel links configuration
@@ -179,12 +179,14 @@ async def process_help(callback_query: types.CallbackQuery):
     )
     await callback_query.answer()
 
-# Safe application hook triggered cleanly when server boots up
-async def on_startup() -> None:
+# Double-check you import Bot from aiogram at the top if it isn't there
+from aiogram import Bot
+
+async def on_startup(bot: Bot) -> None:
     logging.info(f"Setting webhook to: {WEBHOOK_URL}")
     await bot.set_webhook(url=WEBHOOK_URL, drop_pending_updates=True)
 
-async def on_shutdown() -> None:
+async def on_shutdown(bot: Bot) -> None:
     logging.info("Tearing down webhooks cleanly...")
     await bot.delete_webhook()
     await bot.session.close()
@@ -201,20 +203,9 @@ def main():
         bot=bot,
     )
     webhook_requests_handler.register(app, path="/webhook")
+    
+    # setup_application wires up your on_startup and on_shutdown routes behind the scenes
     setup_application(app, dp, bot=bot)
-    
-    dp.startup.register(on_startup)
-    dp.shutdown.register(on_shutdown)
-
-    port = int(os.environ.get("PORT", 8000))
-    web.run_app(app, host="0.0.0.0", port=port)
-    
-    webhook_requests_handler.register(app, path="/webhook")
-    setup_application(app, dp, bot=bot)
-    
-    # Correctly bind startup and shutdown callbacks directly into the web application life cycle
-    app.on_startup.append(on_startup)
-    app.on_shutdown.append(on_shutdown)
 
     port = int(os.environ.get("PORT", 8000))
     web.run_app(app, host="0.0.0.0", port=port)
