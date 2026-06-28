@@ -165,31 +165,7 @@ async def process_category_selection(callback_query: types.CallbackQuery):
         parse_mode="Markdown"
     )
     await callback_query.answer()
-@dp.callback_query(lambda c: c.data == "menu_post")
-async def process_post_item(callback_query: types.CallbackQuery):
-    uid = callback_query.from_user.id
-    
-    back_kb = types.InlineKeyboardMarkup(
-        inline_keyboard=[[types.InlineKeyboardButton(text=get_txt(uid, "btn_back"), callback_data="back_to_main")]]
-    )
-    
-    post_text_en = "➕ **Want to list an item?**\n\nTo post your House, Car, or Rental on our channels, please send the details and photos directly to our admin: @girumyit."
-    post_text_am = "➕ **ዕቃ መመዝገብ ይፈልጋሉ?**\n\nቤት፣ መኪና ወይም የኪራይ ዕቃዎችን በቻናሎቻችን ላይ ለመልቀቅ እባክዎ ዝርዝሩን እና ፎቶዎችን በቀጥታ ለአስተዳዳሪችን ይላኩ፦ @girumyit"
-    
-    lang = USER_LANGUAGES.get(uid, "am")
-    display_text = post_text_en if lang == "en" else post_text_am
 
-    await callback_query.message.edit_text(
-        text=display_text,
-        reply_markup=back_kb,
-        parse_mode="Markdown"
-    )
-    await callback_query.answer()
-
-# Double-check you import Bot from aiogram at the top if it isn't there
-from aiogram import Bot
-
-async def on_startup(bot: Bot) -> None:
 @dp.callback_query(lambda c: c.data == "menu_post")
 async def process_post_item(callback_query: types.CallbackQuery):
     uid = callback_query.from_user.id
@@ -219,8 +195,6 @@ async def process_help(callback_query: types.CallbackQuery):
         parse_mode="Markdown"
     )
     await callback_query.answer()
-# Double-check you import Bot from aiogram at the top if it isn't there
-from aiogram import Bot
 
 async def on_startup(bot: Bot) -> None:
     logging.info(f"Setting webhook to: {WEBHOOK_URL}")
@@ -254,6 +228,6 @@ def main():
     port = int(os.environ.get("PORT", 8000))
     web.run_app(app, host="0.0.0.0", port=port)
 
-
 if __name__ == "__main__":
     main()
+
