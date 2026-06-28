@@ -13,7 +13,7 @@ logging.basicConfig(level=logging.INFO)
 
 TOKEN = "8910862510:AAHQ2hexfFKQMzlfIXZg9SpoCN0bzzUeFg4"
 WEBHOOK_URL = "https://yenedelalabot.onrender.com/webhook"
-ADMIN_ID = 5691062953  # Replace with your actual Telegram numeric chat ID to receive submittals!
+ADMIN_ID = 1001171704728  # Replace with your actual Telegram numeric chat ID to receive submittals!
 
 CHANNEL_LINKS = {
     "house_rent": "https://t.me/rentinadis",
