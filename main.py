@@ -278,7 +278,7 @@ async def post_photos_and_finalize(message: types.Message, state: FSMContext):
         await state.update_data(photos=data["photos"])
         return
 
-        if message.text == "✅ Done / አብቅቻለሁ" or (not message.photo and len(data["photos"]) > 0):
+    if message.text == "✅ Done / አብቅቻለሁ" or (not message.photo and len(data["photos"]) > 0):
         # Build out summary message using safe HTML formatting
         summary = (
             "🚀 <b>New Listing Submission!</b>\n\n"
@@ -290,9 +290,8 @@ async def post_photos_and_finalize(message: types.Message, state: FSMContext):
             f"📝 <b>Description:</b> {data.get('description')}"
         )
         
-        # Ship summary metadata over to admin chat target room
         try:
-            # Switched parse_mode to HTML to prevent Markdown formatting parsing crashes!
+            # Send the text summary using HTML format
             await bot.send_message(chat_id=ADMIN_ID, text=summary, parse_mode="HTML")
             
             for photo_id in data.get("photos", []):
