@@ -278,21 +278,28 @@ async def post_photos_and_finalize(message: types.Message, state: FSMContext):
         await state.update_data(photos=data["photos"])
         return
 
-    if message.text == "✅ Done / አብቅቻለሁ" or (not message.photo and len(data["photos"]) > 0):
+        if message.text == "✅ Done / አብቅቻለሁ" or (not message.photo and len(data["photos"]) > 0):
+        # Build out summary message using safe HTML formatting
         summary = (
-            "🚀 **New Listing Submission!**\n\n"
-            f"👤 **User:** @{message.from_user.username or 'No Username'} (ID: {uid})\n"
-            f"📁 **Category:** {data.get('category')}\n"
-            f"🏢 **Type:** {data.get('type')}\n"
-            f"🏷️ **Deal:** {data.get('deal')}\n"
-            f"📌 **Title:** {data.get('title')}\n"
-            f"📝 **Description:** {data.get('description')}"
+            "🚀 <b>New Listing Submission!</b>\n\n"
+            f"👤 <b>User:</b> @{message.from_user.username or 'No Username'} (ID: {uid})\n"
+            f"📁 <b>Category:</b> {data.get('category')}\n"
+            f"🏢 <b>Type:</b> {data.get('type')}\n"
+            f"🏷️ <b>Deal:</b> {data.get('deal')}\n"
+            f"📌 <b>Title:</b> {data.get('title')}\n"
+            f"📝 <b>Description:</b> {data.get('description')}"
         )
         
+        # Ship summary metadata over to admin chat target room
         try:
-            await bot.send_message(chat_id=ADMIN_ID, text=summary)
+            # Switched parse_mode to HTML to prevent Markdown formatting parsing crashes!
+            await bot.send_message(chat_id=ADMIN_ID, text=summary, parse_mode="HTML")
+            
             for photo_id in data.get("photos", []):
-                await bot.send_photo(chat_id=ADMIN_ID, photo=photo_id)
+                try:
+                    await bot.send_photo(chat_id=ADMIN_ID, photo=photo_id)
+                except Exception as p_err:
+                    logging.error(f"Photo send fail: {p_err}")
         except Exception as e:
             logging.error(f"Failed forwarding entry to admin: {e}")
             
