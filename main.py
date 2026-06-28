@@ -13,7 +13,7 @@ logging.basicConfig(level=logging.INFO)
 
 TOKEN = "8910862510:AAHQ2hexfFKQMzlfIXZg9SpoCN0bzzUeFg4"
 WEBHOOK_URL = "https://yenedelalabot.onrender.com/webhook"
-ADMIN_ID = 427124870  # Ensure this is your correct personal numeric ID
+ADMIN_ID = 5691062953  # Ensure this is your correct personal numeric ID
 
 CHANNEL_LINKS = {
     "house_rent": "https://t.me/rentinadis",
