@@ -1,3 +1,5 @@
 aiogram
 aiohttp
 requests
+python-telegram-bot==21.5
+motor==3.6.0
