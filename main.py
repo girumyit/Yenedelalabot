@@ -41,12 +41,12 @@ USER_LANGUAGES = {}
 
 STRINGS = {
     "welcome": {
-        "en": "👋 **Welcome to Your Delala!**\n\n🌍 No middleman. Direct.\nPlease choose your language / የቋንቋ ምርጫ፦",
-        "am": "👋 **እንኳን ወደ Your Delala በደህና መጡ!**\n\n🇪🇹 ያለ ደላላ። በቀጥታ።\n🌍 No middleman. Direct.\n\nእባክዎ ቋንቋ ይምረጡ / Please choose your language፦"
+        "en": "👋 **Welcome to YeneDelala!**\n\n🌍 No middleman. Direct.\nPlease choose your language / የቋንቋ ምርጫ፦",
+        "am": "👋 **እንኳን ወደ YeneDelala በደህና መጡ!**\n\n🇪🇹 የኔደላላ። በቀጥታ።\n🌍 No middleman. Direct.\n\nእባክዎ ቋንቋ ይምረጡ / Please choose your language፦"
     },
     "intro_text": {
         "en": "📢 **Post directly! Fast, clear, and commission-free.**\nWhat would you like to do today?",
-        "am": "ደላላውን ይዘልላሉ! 🇪🇹\n\nሻጮች — ያላችሁን ንብረት ለመሸጥ ለምን ኮሚሽን ትከፍላላችሁ?\nገዢዎች — እቃ ለመመልከት ብቻ ለምን አላስፈላጊ ክፍያ ትከፍላላችሁ?\nሁለታችሁም — ግብይት ለመፈጸም ለምን ሳምንታትን ትጠብቃላችሁ?\n\nማስታወቂያዎን ይልቀቁ። በቀጥታ ይገናኙ። ፈጣን። ግልጽ። ያለ ኮሚሽን።\n\nYourDelala — የኢትዮጵያ ዘመናዊ ገበያ። 🛒"
+        "am": "ደላላውን ይዘልላሉ! 🇪🇹\n\nሻጮች — ያላችሁን ንብረት ለመሸጥ ለምን ኮሚሽን ትከፍላላችሁ?\nገዢዎች — እቃ ለመመልከት ብቻ ለምን አላስፈላጊ ክፍያ ትከፍላላችሁ?\nሁለታችሁም — ግብይት ለመፈጸም ለምን ሳምንታትን ትጠብቃላችሁ?\n\nማስታወቂያዎን ይልቀቁ። በቀጥታ ይገናኙ። ፈጣን። ግልጽ። ያለ ኮሚሽን።\n\nYeneDelala — የኢትዮጵያ ዘመናዊ ገበያ። 🛒"
     },
     "btn_browse": {"en": "🛍️ Buy or Rent", "am": "🛍️ መግዛት ወይም መከራየት እፈልጋለሁ"},
     "btn_post": {"en": "💰 Sell or Rent Out", "am": "💰 መሸጥ ወይም ማከራየት እፈልጋለሁ"},
@@ -105,9 +105,7 @@ async def start_posting_workflow(callback_query: types.CallbackQuery, state: FSM
         inline_keyboard=[
             [types.InlineKeyboardButton(text="🚗 የመኪና እና የሞተር ሽያጭ", callback_data="f_cat_cars")],
             [types.InlineKeyboardButton(text="🏠 ቤት እና ንብረት (ሽያጭ/ኪራይ)", callback_data="f_cat_house")],
-            [types.InlineKeyboardButton(text="📱 ኤሌክትሮኒክስ", callback_data="f_cat_electronics")],
-            [types.InlineKeyboardButton(text="👗 ፋሽን እና ውበት", callback_data="f_cat_fashion")],
-            [types.InlineKeyboardButton(text="🛋️ የቤት እቃዎች እና ቁሳቁሶች", callback_data="f_cat_furniture")]
+            [types.InlineKeyboardButton(text="📱 ሙሉ ገበያ", callback_data="f_cat_all market")],
         ]
     )
     await callback_query.message.edit_text(text="ዛሬ ምን ይሸጣሉ ወይም ያከራያሉ?", reply_markup=kb)
