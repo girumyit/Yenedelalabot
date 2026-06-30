@@ -10,7 +10,7 @@ from aiohttp import web
 
 logging.basicConfig(level=logging.INFO)
 
-TOKEN = "8910862510:AAHQ2hexfFKQMzlfIXZg9SpoCN0bzzUeFg4"
+TOKEN = "8910862510:AAGVQKjkUCAlCqpTZjAdghlzMC0opYwwPP0"
 WEBHOOK_URL = "https://yenedelalabot.onrender.com/webhook"
 ADMIN_ID = 427124870  
 
